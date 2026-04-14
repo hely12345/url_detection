@@ -4,4 +4,3 @@ pandas
 tldextract
 dnspython
 scikit-learn
-whois

@@ -11,6 +11,7 @@ import math
 import socket
 import whois
 from datetime import datetime
+import requests
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -176,8 +177,8 @@ def check(inp):
 
     d_entropy = entropy(domain)
     HTTPSDomainURL = 1 if "https" in (str(domain) + str(path)).lower() else -1
-    
-    def domain_age_days(domain):
+        
+    def domain_age(domain):
         try:
             w = whois.whois(domain)
             created = w.creation_date
@@ -185,35 +186,50 @@ def check(inp):
             if not created:
                 return -1
             created_str = created.isoformat().replace("+00:00", "").replace("Z", "")
-            return (datetime.now() - datetime.fromisoformat(created_str)).days
+            age_days = (datetime.now() - datetime.fromisoformat(created_str)).days
+            return 1 if age_days >= 365 else -1
         except Exception:
             return -1
 
-    def domain_reg_days(domain):
+    def domain_end_period(domain):
         try:
             w = whois.whois(domain)
-            created = w.creation_date
             expires = w.expiration_date
-            created = created[0] if isinstance(created, list) else created
             expires = expires[0] if isinstance(expires, list) else expires
-            if not created or not expires:
+            if not expires:
                 return -1
-            created_str = created.isoformat().replace("+00:00", "").replace("Z", "")
             expires_str = expires.isoformat().replace("+00:00", "").replace("Z", "")
-            created = datetime.fromisoformat(created_str)
-            expires = datetime.fromisoformat(expires_str)
-            return (expires - created).days
+            remaining_days = (datetime.fromisoformat(expires_str) - datetime.now()).days
+            return -1 if remaining_days <= 180 else 1
         except Exception:
             return -1
-        
-    age     = domain_age_days(domain)
-    reg_len = domain_reg_days(domain)
+
+    dom_age = domain_age(domain)
+    dom_end = domain_end_period(domain)
+
+    def web_traffic_single(domain):
+        try:
+            r = requests.get(
+                f"https://tranco-list.eu/api/ranks/domain/{domain}",
+                timeout=5
+            )
+            ranks = r.json().get("ranks", [])
+            rank = ranks[0].get("rank", 0) if ranks else 0
+            if rank <= 100_000:
+                return 1
+            if rank <= 500_000:
+                return 0
+            return -1
+        except Exception:
+            return -1
+    
+    web_traf = web_traffic_single(domain)
 
     url_info = [[
         leng, dots, ats, hyp, undsc, slsh, dbslsh, bcksl,
         quem, ast, amp, eq, perc, digits, char, digtochar,port,
         domain_leng, has_dig, HTTPSDomainURL, subd_count,
-        tld_exist, is_shortened, ip_type, depth, dot3,redir,prefsuff,nonStdPort,d_entropy,age,reg_len
+        tld_exist, is_shortened, ip_type, depth, dot3,redir,prefsuff,nonStdPort,d_entropy, dom_age, dom_end, web_traf
     ]]
     verdict = rf.predict(url_info)[0].capitalize()
     proba   = rf.predict_proba(url_info)
