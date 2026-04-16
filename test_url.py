@@ -231,6 +231,13 @@ def check(inp):
         domain_leng, has_dig, HTTPSDomainURL, subd_count,
         tld_exist, is_shortened, ip_type, depth, dot3,redir,prefsuff,nonStdPort,d_entropy, dom_age, dom_end, web_traf
     ]]
+
+    st.write(dict(zip(['leng','dots','ats','hyp','undsc','slsh','dbslsh','bcksl',
+     'quem','ast','amp','eq','perc','digits','char','digtochar','port',
+     'domain_leng','has_dig','HTTPSDomainURL','subd_count',
+     'tld_exist','is_shortened','ip_type','depth','dot3','redir',
+     'prefsuff','nonStdPort','d_entropy','dom_age','dom_end','web_traf'],
+    url_info[0])))
     st.write(f"dom_age={dom_age}, dom_end={dom_end}, web_traf={web_traf}, is_https={is_https}")
     verdict = rf.predict(url_info)[0].capitalize()
     proba   = rf.predict_proba(url_info)
