@@ -184,12 +184,12 @@ def check(inp):
             created = w.creation_date
             created = created[0] if isinstance(created, list) else created
             if not created:
-                return -1
+                return 0
             created_str = created.isoformat().replace("+00:00", "").replace("Z", "")
             age_days = (datetime.now() - datetime.fromisoformat(created_str)).days
             return 1 if age_days >= 365 else -1
         except Exception:
-            return -1
+            return 0
 
     def domain_end_period(domain):
         try:
@@ -197,12 +197,12 @@ def check(inp):
             expires = w.expiration_date
             expires = expires[0] if isinstance(expires, list) else expires
             if not expires:
-                return -1
+                return 0
             expires_str = expires.isoformat().replace("+00:00", "").replace("Z", "")
             remaining_days = (datetime.fromisoformat(expires_str) - datetime.now()).days
             return -1 if remaining_days <= 180 else 1
         except Exception:
-            return -1
+            return 0
 
     dom_age = domain_age(domain)
     dom_end = domain_end_period(domain)
@@ -267,7 +267,7 @@ def is_reachable(url):
         host = urlparse(url).hostname
         if not host:
             return False
-        socket.setdefaulttimeout(10)
+        socket.setdefaulttimeout(4)
         socket.gethostbyname(host)
         return True
     except Exception:
@@ -296,18 +296,8 @@ def main():
             if '.' not in url:
                 render_invalid(url)
                 continue
-            # DEBUG - add this temporarily
-            reachable = is_reachable(url)
-            st.write(f"**{url}** → reachable: {reachable}")
-            if not reachable:
-                render_invalid(url, "Website does not exist")
-                continue
-            
+
             verdict, prob = check(url)
-        
-            # DEBUG - add this too
-            st.write(f"dom_age / dom_end / web_traf will show in check()")
-        
             render_result(url, verdict, prob)
 
 
