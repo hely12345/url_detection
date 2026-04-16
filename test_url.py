@@ -231,6 +231,7 @@ def check(inp):
         domain_leng, has_dig, HTTPSDomainURL, subd_count,
         tld_exist, is_shortened, ip_type, depth, dot3,redir,prefsuff,nonStdPort,d_entropy, dom_age, dom_end, web_traf
     ]]
+    st.write(f"dom_age={dom_age}, dom_end={dom_end}, web_traf={web_traf}, is_https={is_https}")
     verdict = rf.predict(url_info)[0].capitalize()
     proba   = rf.predict_proba(url_info)
     return verdict, proba
@@ -266,7 +267,7 @@ def is_reachable(url):
         host = urlparse(url).hostname
         if not host:
             return False
-        socket.setdefaulttimeout(4)
+        socket.setdefaulttimeout(10)
         socket.gethostbyname(host)
         return True
     except Exception:
@@ -295,10 +296,18 @@ def main():
             if '.' not in url:
                 render_invalid(url)
                 continue
-            if not is_reachable(url):
+            # DEBUG - add this temporarily
+            reachable = is_reachable(url)
+            st.write(f"**{url}** → reachable: {reachable}")
+            if not reachable:
                 render_invalid(url, "Website does not exist")
                 continue
+            
             verdict, prob = check(url)
+        
+            # DEBUG - add this too
+            st.write(f"dom_age / dom_end / web_traf will show in check()")
+        
             render_result(url, verdict, prob)
 
 
