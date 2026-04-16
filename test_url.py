@@ -103,7 +103,7 @@ def check(inp):
             res = urlsplit(str(url))
             return res.scheme, res.path, res.port
         except Exception:
-            return None, None
+            return None, None, None
 
     sch, path, port = split_url_safe(inp)
 
@@ -259,9 +259,10 @@ def render_result(url, verdict, prob):
     </div>
     """, unsafe_allow_html=True)
 
-
 def is_reachable(url):
     try:
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
         host = urlparse(url).hostname
         if not host:
             return False
