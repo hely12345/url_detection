@@ -314,6 +314,14 @@ def main():
             if "." not in url:
                 render_invalid(url)
                 continue
+
+            try:
+                ext = tldextract.extract(url)
+                host_str = '.'.join(filter(None, [ext.subdomain, ext.domain, ext.suffix]))
+                socket.gethostbyname(host_str)
+            except Exception:
+                render_invalid(url, "Website doesn't exist")
+                continue
             verdict, prob = check(url)
             render_result(url, verdict, prob)
 if __name__ == "__main__":
