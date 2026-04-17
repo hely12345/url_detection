@@ -12,6 +12,7 @@ import socket
 import whois
 from datetime import datetime
 import requests
+import numpy as np
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
