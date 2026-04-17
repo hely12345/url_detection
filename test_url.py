@@ -154,7 +154,7 @@ def check(inp):
         'is.gd', 'buff.ly', 'adf.ly', 'short.io', 'rebrand.ly',
         'tiny.cc', 'lnkd.in', 'db.tt', 'qr.ae', 'cur.lv',
     }
-    is_shortened = int(any(s in domain for s in shorteners)) if domain else 0
+    is_shortened = int(domain in shorteners) if domain else 0
 
     def ip_typ(ip):
         try:
@@ -190,7 +190,7 @@ def check(inp):
             age_days = (datetime.now() - datetime.fromisoformat(created_str)).days
             return 1 if age_days >= 365 else -1
         except Exception:
-            return 0
+            return -1
 
     def domain_end_period(domain):
         try:
@@ -203,7 +203,7 @@ def check(inp):
             remaining_days = (datetime.fromisoformat(expires_str) - datetime.now()).days
             return -1 if remaining_days <= 180 else 1
         except Exception:
-            return 0
+            return -1
 
     dom_age = domain_age(domain)
     dom_end = domain_end_period(domain)
@@ -225,7 +225,7 @@ def check(inp):
             return -1
     
     web_traf = web_traffic_single(domain)
-
+    port_final = port if port is not None else np.nan
     url_info = [[
         leng, dots, ats, hyp, undsc, slsh, dbslsh, bcksl,
         quem, ast, amp, eq, perc, digits, char, digtochar,port,
@@ -234,12 +234,14 @@ def check(inp):
     ]]
 
     st.write(dict(zip(['leng','dots','ats','hyp','undsc','slsh','dbslsh','bcksl',
-     'quem','ast','amp','eq','perc','digits','char','digtochar','port',
+     'quem','ast','amp','eq','perc','digits','char','digtochar','port_final',
      'domain_leng','has_dig','HTTPSDomainURL','subd_count',
      'tld_exist','is_shortened','ip_type','depth','dot3','redir',
      'prefsuff','nonStdPort','d_entropy','dom_age','dom_end','web_traf'],
     url_info[0])))
+    
     st.write(f"dom_age={dom_age}, dom_end={dom_end}, web_traf={web_traf}, is_https={is_https}")
+    url_info = [[None if v is None else v for v in url_info[0]]]
     verdict = rf.predict(url_info)[0].capitalize()
     proba   = rf.predict_proba(url_info)
     return verdict, proba
