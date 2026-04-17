@@ -9,8 +9,7 @@ from sklearn.preprocessing import LabelEncoder
 
 data = pd.read_csv('ready_final_final.csv')
 # print(data.info())
-
-cols = ['Unnamed: 0','domain','type','tld','url','is_https']
+cols = ['Unnamed: 0','domain','type','tld','url','is_https','DomainAge','DomainEndPeriod']
 
 X = data.drop(cols,axis=1)
 
