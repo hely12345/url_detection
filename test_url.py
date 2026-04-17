@@ -29,7 +29,7 @@ FEATURE_COLS = [
     'domain_length', 'has_digit', 'HTTPSDomainURL', 'subd_count',
     'tld_exists', 'is_shortened', 'ip_type', 'path_depth', 'dot>3',
     'redirecting//', 'prefsuff', 'nonStdPort', 'domain_entropy',
-    'DomainAge', 'DomainEndPeriod', 'web_traffic',
+    'web_traffic',
 ]
 
 st.set_page_config(page_title="Phishing Detector", layout="centered")
