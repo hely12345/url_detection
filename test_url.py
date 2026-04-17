@@ -163,7 +163,7 @@ def check(inp):
         except Exception:
             return -1
 
-    ip_type = ip_typ(domain) if domain and domain.replace('.','').isdigit() else 0
+    ip_type = ip_typ(domain) if domain else -1
     depth   = path.count('/') if path and pd.notna(path) else 0
     dot3    = 1 if dots > 3 else 0
     port_val = port if port is not None else (443 if sch == 'https' else 80)
@@ -177,7 +177,7 @@ def check(inp):
         return -sum(p * math.log2(p) for p in probs)
 
     d_entropy = entropy(domain)
-    HTTPSDomainURL = 1 if sch == "https" else -1
+    HTTPSDomainURL = 1 if "https" in (str(domain) + str(path or "")).lower() else -1
         
     def domain_age(domain):
         try:
@@ -228,7 +228,7 @@ def check(inp):
 
     url_info = [[
         leng, dots, ats, hyp, undsc, slsh, dbslsh, bcksl,
-        quem, ast, amp, eq, perc, digits, char, digtochar,port_val,
+        quem, ast, amp, eq, perc, digits, char, digtochar,port,
         domain_leng, has_dig, HTTPSDomainURL, subd_count,
         tld_exist, is_shortened, ip_type, depth, dot3,redir,prefsuff,nonStdPort,d_entropy, dom_age, dom_end, web_traf
     ]]
