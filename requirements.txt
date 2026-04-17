@@ -1,0 +1,7 @@
+streamlit
+joblib
+pandas
+tldextract
+dnspython
+scikit-learn
+whois
