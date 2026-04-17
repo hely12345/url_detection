@@ -188,9 +188,7 @@ def entropy(s: str) -> float:
 def count_subd(url: str) -> int:
     try:
         subd = tldextract.extract(url).subdomain
-        if not subd or subd.lower() == "www":
-            return 0
-        return len(subd.split("."))
+        return len(subd.split('.')) if subd else 0
     except Exception:
         return 0
 
