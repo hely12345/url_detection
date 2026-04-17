@@ -344,3 +344,45 @@ def render_result(url, verdict, prob):
             <div class="bar-bg"><div class="bar-fill-legit" style="width:{lp}%"></div></div>
             <span class="bar-pct">{lp}%</span>
         </div>
+        <div class="bar-row">
+            <span class="bar-label">Phishing</span>
+            <div class="bar-bg"><div class="bar-fill-phish" style="width:{pp}%"></div></div>
+            <span class="bar-pct">{pp}%</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_invalid(url, reason="Not a valid URL"):
+    st.markdown(f"""
+    <div class="result-item">
+        <div class="result-url">{url or "(empty)"}</div>
+        <div class="result-verdict verdict-invalid">{reason}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    st.markdown("<h1>Phishing or Legitimate?</h1>", unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Paste one or more URLs, separated by commas</p>',
+                unsafe_allow_html=True)
+
+    textt = st.text_area("", placeholder="https://example.com, https://another.com", height=90)
+
+    if st.button("Check"):
+        urls = [u.strip() for u in textt.split(",") if u.strip()]
+        if not urls:
+            st.warning("Please enter at least one URL.")
+            return
+        for url in urls:
+            if "." not in url:
+                render_invalid(url)
+                continue
+            verdict, prob = check(url)
+            render_result(url, verdict, prob)
+
+
+if __name__ == "__main__":
+    main()
