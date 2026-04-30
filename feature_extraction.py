@@ -11,15 +11,20 @@ import math
 import os
 import whois
 import requests
+import tldextract
+import pandas as pd
 import time
 import json
 import concurrent
 import zipfile
 import io
+from gensim.models import FastText
+import re
+import numpy as np
+from urllib.parse import urlsplit, urlparse
 
 df = pd.read_csv('url_dataset.csv')
 df['url'] = df['url'].str.replace(r'^(https?://)?www\.', r'\1', regex=True)
-
 legitimate_ip_url = [
     {'url':'http://192.168.0.1', 'type':'legitimate'},
     {'url':'http://192.168.1.1', 'type':'legitimate'},
@@ -34,10 +39,8 @@ legitimate_ip_url = [
     {'url':'http://127.0.0.1:5000/login', 'type':'legitimate'},
     {'url':'http://127.0.0.1', 'type':'legitimate'},
 ]
-
 new_df = pd.DataFrame(legitimate_ip_url)
 df = pd.concat([df, new_df], ignore_index=True)
-
 df['url_len'] = df['url'].str.len()
 df['dot_count'] = df['url'].str.count(r'\.')
 df['at_count'] = df['url'].str.count("@")
@@ -54,22 +57,18 @@ df['percent_count'] = df['url'].str.count("%")
 df['numeric_count'] = df['url'].str.count(r'\d')
 df['letter_count'] = df['url'].str.count(r'[a-zA-Z]')
 df['num_to_alpha'] = df['numeric_count'] / (df['letter_count'] + 1)
-
 print("String features done")
-
 def parse_url(url):
     try:
-        res = urlsplit(str(url))
+        res  = urlsplit(str(url))
         host = res.hostname or ""
         port = res.port
         return res.scheme, res.netloc, res.path, res.query, res.fragment, host, port
     except:
         return None, None, None, None, None, "", None
-
 parsed = df['url'].apply(parse_url)
 df[['scheme','netloc','path','query','fragment','domain','port']] = pd.DataFrame(parsed.tolist(), index=df.index)
 df['domain'] = df['domain'].replace("", None)
-
 def clean_domain(host):
     if pd.isna(host) or host is None:
         return None
@@ -77,15 +76,12 @@ def clean_domain(host):
     if host.startswith("www."):
         host = host[4:]
     return host
-
 df['domain'] = df['domain'].apply(clean_domain)
 df['domain_length'] = df['domain'].str.len()
 df['is_https'] = df['scheme'].apply(lambda x: -1 if x == "https" else 1)
 df['has_digit'] = df['domain'].str.contains(r'\d', na=False).astype(int)
 df["HTTPSDomainURL"] = df.apply(lambda x: 1 if "https" in (str(x["domain"]) + str(x["path"])).lower() else -1, axis=1)
-
 print("URL parsing done")
-
 def extract_tld_info(url):
     try:
         ext = tldextract.extract(str(url))
@@ -95,15 +91,11 @@ def extract_tld_info(url):
         return tld, subd_count
     except:
         return "", 0
-
 tld_results = df['url'].apply(extract_tld_info)
 df[['tld', 'subd_count']] = pd.DataFrame(tld_results.tolist(), index=df.index)
-
 print("TLD extraction done")
-
-tld_cache = {}
+tld_cache  = {}
 cache_lock = threading.Lock()
-
 def check_dns(tld):
     if not tld:
         return 0
@@ -118,40 +110,27 @@ def check_dns(tld):
     with cache_lock:
         tld_cache[tld] = result
     return result
-
 unique_tlds = df['tld'].dropna().unique()
 with ThreadPoolExecutor(max_workers=50) as executor:
     results = list(executor.map(check_dns, unique_tlds))
-
 tld_dns_map = dict(zip(unique_tlds, results))
 df['tld_exists'] = df['tld'].map(tld_dns_map).fillna(0).astype(int)
-
 print("DNS check done")
-
-shortener_domains = {
-    'bit.ly','tinyurl.com','t.co','goo.gl','ow.ly','is.gd','buff.ly',
-    'adf.ly','short.io','rebrand.ly','tiny.cc','lnkd.in','db.tt','qr.ae','cur.lv'
-}
-
+shortener_domains = {'bit.ly','tinyurl.com','t.co','goo.gl','ow.ly','is.gd','buff.ly','adf.ly','short.io','rebrand.ly','tiny.cc','lnkd.in','db.tt','qr.ae','cur.lv'}
 def is_short(domain):
     if pd.isna(domain) or domain is None:
         return 0
     domain = str(domain)
     return int(any(sd in domain for sd in shortener_domains))
-
 df['is_shortened'] = df['domain'].apply(is_short)
-
 def is_ipbased(hostn):
     try:
         ipaddress.ip_address(str(hostn))
         return 1
     except:
         return 0
-
 print("IP check done")
-
 df['scheme'] = df['scheme'].str.replace('httpss', 'https', regex=False)
-
 def ip_typ(ip):
     try:
         ip_obj = ipaddress.ip_address(ip)
@@ -163,33 +142,29 @@ def ip_typ(ip):
             return 2
     except:
         return -1
-
 df['ip_type'] = df['domain'].apply(ip_typ)
 df['path_depth'] = df['path'].apply(lambda x: x.count('/') if pd.notna(x) else 0)
 df['dot>3'] = df['dot_count'].apply(lambda x: 1 if x > 3 else 0)
 df["redirecting//"] = df["url"].apply(lambda x: 1 if str(x).replace("://", "").count("//") > 0 else -1)
 df["prefsuff"] = df["domain"].apply(lambda x: 1 if "-" in str(x) else -1)
 df["nonStdPort"] = df["port"].apply(lambda x: 1 if x and (x not in [80, 443]) else -1)
-
 def entropy(s):
     if not isinstance(s, str) or len(s) == 0:
         return 0
     probs = [c/len(s) for c in Counter(s).values()]
     return -sum(p * math.log2(p) for p in probs)
-
 df['domain_entropy'] = df['domain'].apply(entropy)
-
 WHOIS_CACHE_FILE = "whois_cache.json"
 if os.path.exists(WHOIS_CACHE_FILE):
     with open(WHOIS_CACHE_FILE) as f:
         whois_cache = json.load(f)
 else:
     whois_cache = {}
-
 def _whois_query(domain):
+    """Raw whois call — run inside a thread with an external timeout."""
     import socket
     socket.setdefaulttimeout(8)
-    w = whois.whois(domain)
+    w       = whois.whois(domain)
     created = w.creation_date
     expires = w.expiration_date
     created = created[0] if isinstance(created, list) else created
@@ -198,7 +173,6 @@ def _whois_query(domain):
         created.isoformat() if created else None,
         expires.isoformat() if expires else None,
     )
-
 def get_whois(domain):
     if domain in whois_cache:
         return tuple(whois_cache[domain])
@@ -217,7 +191,6 @@ def get_whois(domain):
                     time.sleep(1)
     whois_cache[domain] = result
     return result
-
 def fetch_whois_in_batches(domains, batch_size=200, max_workers=10):
     results = {}
     total_batches = (len(domains) + batch_size - 1) // batch_size
@@ -241,10 +214,8 @@ def fetch_whois_in_batches(domains, batch_size=200, max_workers=10):
         print(f"  Saved ({len(whois_cache)} domains cached so far)")
         time.sleep(0.5)
     return results
-
 unique_domains = df['domain'].dropna().unique()
-whois_results = fetch_whois_in_batches(unique_domains)
-
+whois_results  = fetch_whois_in_batches(unique_domains)
 def domain_age_days(domain):
     entry = whois_results.get(domain) or whois_cache.get(domain)
     created_str = entry[0] if entry else None
@@ -256,7 +227,6 @@ def domain_age_days(domain):
         return 1 if age_days >= 365 else -1
     except Exception:
         return -1
-
 def domain_end_period(domain):
     entry = whois_results.get(domain) or whois_cache.get(domain)
     if not entry or not entry[1]:
@@ -267,10 +237,8 @@ def domain_end_period(domain):
         return -1 if remaining_days <= 180 else 1
     except Exception:
         return -1
-
-df['DomainAge'] = df['domain'].apply(domain_age_days)
+df['DomainAge']       = df['domain'].apply(domain_age_days)
 df['DomainEndPeriod'] = df['domain'].apply(domain_end_period)
-
 def download_tranco():
     if not os.path.exists('tranco.csv'):
         print("Downloading Tranco list...")
@@ -279,12 +247,9 @@ def download_tranco():
         z.extractall('.')
         os.rename('top-1m.csv', 'tranco.csv')
         print("Done.")
-
 download_tranco()
-
 tranco_df = pd.read_csv('tranco.csv', names=['rank', 'domain'])
 tranco_rank = dict(zip(tranco_df['domain'], tranco_df['rank']))
-
 def web_traffic(domain):
     if not domain:
         return -1
@@ -297,7 +262,48 @@ def web_traffic(domain):
         return 0
     return -1
 
+
+def tokenize_url(url):
+    url = url.lower().strip()
+
+    # ensure scheme exists
+    if not url.startswith("http"):
+        url = "http://" + url
+
+    parsed = urlparse(url)
+
+    tokens = []
+
+    # domain split
+    domain = parsed.netloc
+    tokens += re.split(r'[^a-z0-9]', domain)
+
+    # path split
+    tokens += re.split(r'[^a-z0-9]', parsed.path)
+
+    # query split
+    tokens += re.split(r'[^a-z0-9]', parsed.query)
+
+    # remove empty tokens
+    tokens = [t for t in tokens if t]
+
+    return tokens
+
+tokens = df['url'].apply(tokenize_url).tolist()
+
+model = FastText(sentences=tokens,vector_size=50,window=5,min_count=1,workers=4,sg=1)
+
+def url_embedding(url):
+    tokens = tokenize_url(url)
+    vecs = [model.wv[w] for w in tokens if w in model.wv]
+    return np.mean(vecs, axis=0) if vecs else np.zeros(model.vector_size)
+
+embeddings = np.vstack(df['url'].apply(url_embedding))
+embed_cols = [f'embed_{i}' for i in range(50)]
+
 df['web_traffic'] = df['domain'].apply(web_traffic)
 
+df[embed_cols] = pd.DataFrame(embeddings, index=df.index)
 df.drop(columns=['scheme', 'netloc', 'path', 'query', 'fragment'], inplace=True)
 df.to_csv('Features_extracted_final_final.csv', index=False)
+model.save("url_word2vec.model")
