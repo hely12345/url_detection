@@ -393,7 +393,7 @@ def check(inp: str):
         else:
             proba = np.array([[0.95, 0.05]])
         return rule_verdict, proba, feat_df, rule_reason
-
+    feat_df = feat_df.reindex(columns=rf.feature_names_in_, fill_value=0)
     proba = rf.predict_proba(feat_df)
     ml_prob = proba[0][1]   
 
