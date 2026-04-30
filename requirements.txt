@@ -1,5 +1,5 @@
-numpy>=2.4.3
-scipy>=1.13.0
+numpy==2.0.0
+scipy==1.13.1
 gensim==4.3.2
 streamlit
 pandas
