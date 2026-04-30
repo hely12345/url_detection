@@ -2,11 +2,12 @@ pandas
 scikit-learn
 xgboost
 lightgbm
-gensim
 tldextract
 dnspython
 python-whois
 requests
 streamlit
 joblib
-numpy
+gensim==4.3.2
+numpy<2.0.0
+scipy
