@@ -275,6 +275,10 @@ def url_embedding(url):
 
 def extract_features(inp: str) -> pd.DataFrame:
     inp = inp.strip()
+
+    if not inp.startswith("http"):
+        inp = "https://" + inp
+        
     inp = re.sub(r'^(https?://)?www\.', r'\1', inp)
     leng = len(inp)
     dots = inp.count(".")
