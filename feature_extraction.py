@@ -266,7 +266,6 @@ def web_traffic(domain):
 def tokenize_url(url):
     url = url.lower().strip()
 
-    # ensure scheme exists
     if not url.startswith("http"):
         url = "http://" + url
 
@@ -274,17 +273,10 @@ def tokenize_url(url):
 
     tokens = []
 
-    # domain split
     domain = parsed.netloc
     tokens += re.split(r'[^a-z0-9]', domain)
-
-    # path split
     tokens += re.split(r'[^a-z0-9]', parsed.path)
-
-    # query split
     tokens += re.split(r'[^a-z0-9]', parsed.query)
-
-    # remove empty tokens
     tokens = [t for t in tokens if t]
 
     return tokens
